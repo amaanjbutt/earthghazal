@@ -5,7 +5,7 @@ import versesJson from '@/data/verses.json';
 import { useSceneStore } from '@/lib/scene';
 import { VerseBlock } from './VerseBlock';
 
-type Verse = typeof versesJson.verses[number];
+import type { Verse } from '@/lib/types';
 
 export function VerseCycler() {
   const showTransliteration = useSceneStore(s => s.subtitles.transliteration);
@@ -14,7 +14,8 @@ export function VerseCycler() {
   const next = useSceneStore(s => s.nextVerse);
   const interval = useSceneStore(s => s.verseIntervalMs);
 
-  const current = (versesJson.verses as Verse[])[index % versesJson.verses.length];
+  const verses = versesJson.verses satisfies Verse[];
+  const current = verses[index % verses.length];
 
   const verseDuration = current.displayMs ?? interval;
 
@@ -47,20 +48,10 @@ export function VerseCycler() {
           <VerseBlock
             urdu={current.lang === 'ur' ? current.text : undefined}
             transliteration={current.transliteration}
-            translation={current.translation ?? (current.lang === 'en' ? current.text : undefined)}
-
-=======
-
-
-
-
             translation={
               current.translation ??
               (current.lang === 'en' ? current.text : undefined)
             }
-
-
-
             showTransliteration={showTransliteration}
             showTranslation={showTranslation}
           />
