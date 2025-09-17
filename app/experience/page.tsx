@@ -4,6 +4,7 @@ import { EarthWindow } from '@/components/video/EarthWindow';
 import { WeightlessParticles } from '@/components/canvas/WeightlessParticles';
 import { VerseCycler } from '@/components/poetry/VerseCycler';
 import { ControlsBar } from '@/components/ui/ControlsBar';
+import { AudioEnergyProvider } from '@/components/providers/AudioEnergyProvider';
 import { useSceneStore } from '@/lib/scene';
 
 export default function ExperiencePage() {
@@ -19,6 +20,7 @@ export default function ExperiencePage() {
 
   return (
     <main className="relative min-h-dvh w-full overflow-hidden bg-black">
+      <AudioEnergyProvider />
       <EarthWindow />
       <WeightlessParticles dimmed={focusMode} />
       <div className="pointer-events-none absolute inset-0 grid place-items-center p-6 video-gradient">
