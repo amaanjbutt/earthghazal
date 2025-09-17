@@ -12,6 +12,15 @@ const computeDensityScale = (width: number) => {
 
 type Props = { dimmed?: boolean };
 
+type Particle = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  r: number;
+  life: number;
+};
+
 export function WeightlessParticles({ dimmed = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const energy = useSceneStore(s => s.energy);
@@ -22,8 +31,9 @@ export function WeightlessParticles({ dimmed = false }: Props) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    let particles: Particle[] = [];
     let raf = 0;
-    let particles: { x: number; y: number; vx: number; vy: number; r: number; life: number }[] = [];
     const DPR = Math.min(window.devicePixelRatio || 1, 2);
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     let reduceMotion = mediaQuery.matches;
@@ -34,94 +44,86 @@ export function WeightlessParticles({ dimmed = false }: Props) {
     let lastOrientationUpdate = 0;
     const canUseDeviceOrientation = 'DeviceOrientationEvent' in window;
 
-    const stop = () => {
+    const drawFrame = (staticRender: boolean) => {
+      const energyLevel = clamp(energy(), 0, 1);
+      const driftStrength = 0.0015 + energyLevel * 0.0045;
+      const maxSpeed = 0.04 + energyLevel * 0.06;
+
+      if (!staticRender) {
+        targetWind.x *= 0.97;
+        targetWind.y *= 0.97;
+        wind.x += (targetWind.x - wind.x) * 0.04;
+        wind.y += (targetWind.y - wind.y) * 0.04;
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = dimmed ? 0.2 : 0.5;
+      ctx.fillStyle = 'white';
+
+      for (const particle of particles) {
+        if (!staticRender) {
+          particle.vx += Math.sin(particle.life * 0.003) * driftStrength + wind.x * 0.1;
+          particle.vy += Math.cos(particle.life * 0.004) * driftStrength + wind.y * 0.1;
+          particle.vx = clamp(particle.vx, -maxSpeed, maxSpeed);
+          particle.vy = clamp(particle.vy, -maxSpeed, maxSpeed);
+          particle.x += particle.vx;
+          particle.y += particle.vy;
+          particle.life += 1;
+
+          if (particle.x < 0) particle.x += canvas.width;
+          if (particle.x > canvas.width) particle.x -= canvas.width;
+          if (particle.y < 0) particle.y += canvas.height;
+          if (particle.y > canvas.height) particle.y -= canvas.height;
+        }
+
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    };
+
+    const cancel = () => {
       if (raf) {
         cancelAnimationFrame(raf);
         raf = 0;
       }
     };
 
-    const drawParticleField = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.globalAlpha = dimmed ? 0.2 : 0.5;
-      ctx.fillStyle = 'white';
-      for (const p of particles) {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    };
-
-    const step = () => {
+    const tick = () => {
       if (reduceMotion || hidden) {
         raf = 0;
         return;
       }
 
-      const energyLevel = clamp(energy(), 0, 1);
-      const driftStrength = 0.0015 + energyLevel * 0.0045;
-      const maxSpeed = 0.04 + energyLevel * 0.06;
-
-      targetWind.x *= 0.97;
-      targetWind.y *= 0.97;
-      wind.x += (targetWind.x - wind.x) * 0.04;
-      wind.y += (targetWind.y - wind.y) * 0.04;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.globalAlpha = dimmed ? 0.2 : 0.5;
-      ctx.fillStyle = 'white';
-
-      for (const p of particles) {
-        p.vx += Math.sin(p.life * 0.003) * driftStrength + wind.x * 0.1;
-        p.vy += Math.cos(p.life * 0.004) * driftStrength + wind.y * 0.1;
-        p.vx = clamp(p.vx, -maxSpeed, maxSpeed);
-        p.vy = clamp(p.vy, -maxSpeed, maxSpeed);
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life += 1;
-
-        if (p.x < 0) p.x += canvas.width;
-        if (p.x > canvas.width) p.x -= canvas.width;
-        if (p.y < 0) p.y += canvas.height;
-        if (p.y > canvas.height) p.y -= canvas.height;
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      raf = requestAnimationFrame(step);
+      drawFrame(false);
+      raf = requestAnimationFrame(tick);
     };
 
-    const start = () => {
+    const schedule = () => {
       if (!raf && !reduceMotion && !hidden) {
-        raf = requestAnimationFrame(step);
+        raf = requestAnimationFrame(tick);
       }
     };
 
-    const resize = () => {
+    const rebuildParticles = () => {
       const { innerWidth: w, innerHeight: h } = window;
       canvas.width = Math.floor(w * DPR);
       canvas.height = Math.floor(h * DPR);
-      canvas.style.width = w + 'px';
-      canvas.style.height = h + 'px';
-
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
 
       const densityScale = computeDensityScale(w);
-      const baseCount = Math.max(12, Math.floor(((w * h) / 12000) * density * densityScale));
-      const targetCount = reduceMotion ? Math.max(6, Math.floor(baseCount * 0.35)) : baseCount;
+      const areaFactor = (w * h) / 12000;
+      const focusScale = dimmed ? 0.35 : 1;
+      const baseCount = Math.max(12, Math.floor(areaFactor * density * densityScale * focusScale));
+      const count = reduceMotion ? Math.max(6, Math.floor(baseCount * 0.35)) : baseCount;
 
       wind.x = 0;
       wind.y = 0;
       targetWind.x = 0;
       targetWind.y = 0;
 
-      particles = Array.from({ length: targetCount }, () => ({
-
-      const focusScale = dimmed ? 0.35 : 1;
-      const targetDensity = Math.max(0, Math.floor((w * h) / 12000 * density * focusScale));
-      particles = Array.from({ length: targetDensity }, () => ({
-
+      particles = Array.from({ length: count }, (): Particle => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
         vx: (Math.random() - 0.5) * 0.04 * DPR,
@@ -130,46 +132,29 @@ export function WeightlessParticles({ dimmed = false }: Props) {
         life: Math.random() * 1000
       }));
 
-
-      if (reduceMotion) {
-        drawParticleField();
-
-    }
-    function step() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.globalAlpha = dimmed ? 0.12 : 0.45;
-      ctx.fillStyle = 'white';
-      const baseNudge = dimmed ? 0.02 : 0.05;
-      const reactiveScale = dimmed ? 0.05 : 0.15;
-      const nudge = baseNudge + energy() * reactiveScale;
-      for (const p of particles) {
-        p.vx += Math.sin(p.life * 0.003) * 0.005 * nudge;
-        p.vy += Math.cos(p.life * 0.004) * 0.005 * nudge;
-        p.x += p.vx; p.y += p.vy; p.life += 1;
-        if (p.x < 0) p.x += canvas.width; if (p.x > canvas.width) p.x -= canvas.width;
-        if (p.y < 0) p.y += canvas.height; if (p.y > canvas.height) p.y -= canvas.height;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
-
+      if (reduceMotion || hidden) {
+        drawFrame(true);
       }
     };
 
     const handleVisibilityChange = () => {
       hidden = document.hidden;
       if (hidden) {
-        stop();
+        cancel();
       } else if (!reduceMotion) {
-        start();
+        drawFrame(false);
+        schedule();
       }
     };
 
     const updateMotionPreference = (event?: MediaQueryListEvent) => {
       reduceMotion = event?.matches ?? mediaQuery.matches;
-      resize();
+      cancel();
+      rebuildParticles();
       if (reduceMotion) {
-        stop();
-        drawParticleField();
+        drawFrame(true);
       } else if (!hidden) {
-        start();
+        schedule();
       }
     };
 
@@ -197,15 +182,14 @@ export function WeightlessParticles({ dimmed = false }: Props) {
       targetWind.y = clamp((beta / 45) * 0.02, -0.04, 0.04);
     };
 
-    resize();
-    if (reduceMotion) {
-      drawParticleField();
+    rebuildParticles();
+    if (reduceMotion || hidden) {
+      drawFrame(true);
     } else {
-      start();
+      schedule();
     }
 
-    window.addEventListener('resize', resize);
-
+    window.addEventListener('resize', rebuildParticles);
     window.addEventListener('pointermove', pointerHandler);
     if (canUseDeviceOrientation) {
       window.addEventListener('deviceorientation', orientationHandler);
@@ -223,40 +207,14 @@ export function WeightlessParticles({ dimmed = false }: Props) {
         })();
 
     return () => {
-      stop();
-      window.removeEventListener('resize', resize);
+      cancel();
+      window.removeEventListener('resize', rebuildParticles);
       window.removeEventListener('pointermove', pointerHandler);
       if (canUseDeviceOrientation) {
         window.removeEventListener('deviceorientation', orientationHandler);
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       removeMotionListener();
-
-
-    const handleVisibility = () => {
-      if (document.hidden) {
-        cancelAnimationFrame(raf);
-      } else {
-        raf = requestAnimationFrame(step);
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', resize);
-      document.removeEventListener('visibilitychange', handleVisibility);
-
-    function handleVisibilityChange() {
-      if (document.hidden) cancelAnimationFrame(raf);
-      else raf = requestAnimationFrame(step);
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', resize);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-
-
     };
   }, [dimmed, density, energy]);
 
