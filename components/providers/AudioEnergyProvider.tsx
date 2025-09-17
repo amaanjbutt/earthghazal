@@ -4,29 +4,27 @@ import { useEffect } from 'react';
 import { useSceneStore } from '@/lib/scene';
 
 export function AudioEnergyProvider() {
-  const audioEnabled = useSceneStore(s => s.audio.enabled);
-  const sampleEnergy = useSceneStore(s => s.sampleAudioEnergy);
+  const audioActive = useSceneStore(s => s.audioPlaying && !s.audioMuted);
+  const energy = useSceneStore(s => s.energy);
 
   useEffect(() => {
-    let raf = 0;
-    const cancel = () => {
-      if (raf) cancelAnimationFrame(raf);
-    };
-
-    if (!audioEnabled) {
-      sampleEnergy();
-      return cancel;
+    if (!audioActive) {
+      energy();
+      return;
     }
 
+    let raf = 0;
     const tick = () => {
-      sampleEnergy();
+      energy();
       raf = requestAnimationFrame(tick);
     };
 
     tick();
 
-    return cancel;
-  }, [audioEnabled, sampleEnergy]);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [audioActive, energy]);
 
   return null;
 }
