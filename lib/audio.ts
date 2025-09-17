@@ -15,6 +15,7 @@ let analyser: AnalyserNode | null = null;
 let masterGain: GainNode | null = null;
 let enabled = false;
 let volume = 0.6;
+let muted = false;
 let activeChannelIndex = 0;
 let energyValue = 0;
 let energyBuffer: Uint8Array | null = null;
@@ -38,7 +39,7 @@ const ensureContext = () => {
   if (!ContextCtor) return;
   audioContext = new ContextCtor();
   masterGain = audioContext.createGain();
-  masterGain.gain.value = volume;
+  masterGain.gain.value = muted ? 0 : volume;
   analyser = audioContext.createAnalyser();
   analyser.fftSize = 256;
   masterGain.connect(analyser);
@@ -73,7 +74,8 @@ const getChannel = (index: number): Channel => {
     channel.element.loop = true;
     channel.element.preload = 'auto';
     channel.element.crossOrigin = 'anonymous';
-    channel.element.volume = volume;
+    const isActive = index === activeChannelIndex;
+    channel.element.volume = muted ? 0 : (isActive ? volume : 0);
   }
   if (channel.element && audioContext && masterGain && !channel.source) {
     channel.source = audioContext.createMediaElementSource(channel.element);
@@ -94,6 +96,7 @@ const stopChannel = (channel: Channel) => {
     channel.gain.gain.setValueAtTime(0, now);
   }
   channel.element.pause();
+  channel.trackId = undefined;
 };
 
 const animateGain = (channel: Channel, target: number, duration: number) => {
@@ -107,7 +110,8 @@ const animateGain = (channel: Channel, target: number, duration: number) => {
   }
   if (!channelElement || typeof window === 'undefined') return;
   const startVolume = channelElement.volume;
-  const targetVolume = target * volume;
+  const baseVolume = muted ? 0 : volume;
+  const targetVolume = target * baseVolume;
   const startTime = performance.now();
   const tick = (time: number) => {
     const progress = clamp((time - startTime) / (duration * 1000), 0, 1);
@@ -147,18 +151,80 @@ export async function initAudio() {
   }
 }
 
+export async function play() {
+  ensureContext();
+  const channel = getChannel(activeChannelIndex);
+  const element = channel.element;
+  if (audioContext?.state === 'suspended') {
+    try {
+      await audioContext.resume();
+    } catch (err) {
+      debugWarn('Unable to resume suspended audio context', err);
+    }
+  }
+  if (element) {
+    try {
+      await element.play();
+    } catch (err) {
+      debugWarn('Audio playback blocked until user interaction', err);
+    }
+  }
+  if (channel.gain && audioContext) {
+    const now = audioContext.currentTime;
+    channel.gain.gain.cancelScheduledValues(now);
+    channel.gain.gain.setValueAtTime(1, now);
+  } else if (element && !channel.gain) {
+    element.volume = muted ? 0 : volume;
+  }
+  enabled = true;
+}
+
+export function pause() {
+  channels.forEach(channel => {
+    if (!channel.element) return;
+    if (channel.gain && audioContext) {
+      const now = audioContext.currentTime;
+      channel.gain.gain.cancelScheduledValues(now);
+      channel.gain.gain.setValueAtTime(0, now);
+    } else if (!channel.gain) {
+      channel.element.volume = 0;
+    }
+    channel.element.pause();
+  });
+  enabled = false;
+}
+
 export function setVolume(next: number) {
   volume = clamp(next, 0, 1);
   if (masterGain) {
-    masterGain.gain.value = volume;
+    masterGain.gain.value = muted ? 0 : volume;
   } else {
     channels.forEach((channel, index) => {
       if (channel.element && !channel.gain) {
         const isActive = index === activeChannelIndex;
-        channel.element.volume = (isActive ? 1 : 0) * volume;
+        const baseVolume = muted ? 0 : volume;
+        channel.element.volume = isActive ? baseVolume : 0;
       }
     });
   }
+}
+
+export function setMuted(next: boolean) {
+  muted = next;
+  if (masterGain) {
+    masterGain.gain.value = muted ? 0 : volume;
+    return;
+  }
+  channels.forEach((channel, index) => {
+    if (!channel.element || channel.gain) return;
+    const isActive = index === activeChannelIndex;
+    const baseVolume = muted ? 0 : volume;
+    channel.element.volume = isActive ? baseVolume : 0;
+  });
+}
+
+export function getVolume() {
+  return volume;
 }
 
 export function isAudioEnabled() {
@@ -230,149 +296,5 @@ export async function syncTrackAudio(track?: TrackManifest) {
 export function stopAudio() {
   channels.forEach(stopChannel);
   activeChannelIndex = 0;
+  enabled = false;
 }
-
-let audioContext: AudioContext | null = null;
-let audioElement: HTMLAudioElement | null = null;
-let sourceNode: MediaElementAudioSourceNode | null = null;
-let gainNode: GainNode | null = null;
-let analyserNode: AnalyserNode | null = null;
-let timeDomainData: Float32Array | null = null;
-let graphInitialized = false;
-let desiredVolume = 0.6;
-
-function ensureContext() {
-  if (typeof window === 'undefined') return null;
-  if (!audioContext) {
-    audioContext = new AudioContext();
-  }
-  return audioContext;
-}
-
-function ensureAudioElement() {
-  if (typeof window === 'undefined') return null;
-  if (!audioElement) {
-    audioElement = document.createElement('audio');
-    audioElement.setAttribute('data-role', 'earth-audio');
-    audioElement.crossOrigin = 'anonymous';
-    audioElement.loop = true;
-    audioElement.preload = 'auto';
-    audioElement.playsInline = true;
-    audioElement.style.display = 'none';
-    document.body.appendChild(audioElement);
-  }
-  return audioElement;
-}
-
-function initGraph() {
-  const ctx = ensureContext();
-  const element = ensureAudioElement();
-  if (!ctx || !element) return null;
-  if (!graphInitialized) {
-    sourceNode = ctx.createMediaElementSource(element);
-    gainNode = ctx.createGain();
-    analyserNode = ctx.createAnalyser();
-    analyserNode.fftSize = 1024;
-    analyserNode.smoothingTimeConstant = 0.85;
-    sourceNode.connect(gainNode);
-    gainNode.connect(analyserNode);
-    analyserNode.connect(ctx.destination);
-    timeDomainData = new Float32Array(analyserNode.fftSize);
-    graphInitialized = true;
-  } else if (analyserNode && timeDomainData?.length !== analyserNode.fftSize) {
-    timeDomainData = new Float32Array(analyserNode.fftSize);
-  }
-  if (gainNode) {
-    gainNode.gain.value = desiredVolume;
-  }
-  return element;
-}
-
-export function initAudio() {
-  return initGraph();
-}
-
-export async function play() {
-  const element = initGraph();
-  const ctx = audioContext;
-  if (!element || !ctx) return;
-  try {
-    await ctx.resume();
-  } catch (err) {
-    // ignore resume errors (likely due to autoplay restrictions)
-  }
-  try {
-    if (element.paused) await element.play();
-  } catch (err) {
-    // Swallow play rejections so callers can decide how to react.
-  }
-}
-
-export function pause() {
-  if (!audioElement) return;
-  audioElement.pause();
-}
-
-export function setVolume(volume: number) {
-  desiredVolume = Math.max(0, Math.min(1, volume));
-  if (!gainNode) initGraph();
-  if (gainNode) {
-    gainNode.gain.value = desiredVolume;
-  }
-}
-
-export function getEnergy() {
-  if (!analyserNode || !timeDomainData) return 0;
-  analyserNode.getFloatTimeDomainData(timeDomainData);
-  let sumSquares = 0;
-  for (let i = 0; i < timeDomainData.length; i += 1) {
-    const sample = timeDomainData[i];
-    sumSquares += sample * sample;
-  }
-  return Math.sqrt(sumSquares / timeDomainData.length);
-}
-
-let _enabled = false;
-let _playing = false;
-let _muted = false;
-let _volume = 0.6;
-
-export function initAudio() {
-  _enabled = true;
-  _playing = true;
-}
-
-export function play() {
-  if (!_enabled) initAudio();
-  _playing = true;
-}
-
-export function pause() {
-  _playing = false;
-}
-
-export function setMuted(value: boolean) {
-  _muted = value;
-}
-
-export function isMuted() {
-  return _muted;
-}
-
-export function isPlaying() {
-  return _playing;
-}
-
-export function setVolume(v: number) {
-  _volume = Math.max(0, Math.min(1, v));
-}
-
-export function getVolume() {
-  return _volume;
-}
-
-export function isAudioEnabled() {
-  return _enabled;
-}
-
-export function energy() { return 0; } // replace with AnalyserNode RMS later
