@@ -1,4 +1,5 @@
 'use client';
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import versesJson from '@/data/verses.json';
 import { useSceneStore } from '@/lib/scene';
@@ -15,15 +16,22 @@ export function VerseCycler() {
 
   const current = (versesJson.verses as Verse[])[index % versesJson.verses.length];
 
+  const verseDuration = current.displayMs ?? interval;
+
   // Rotate verses
   // Minimal internal scheduler; could be replaced with a more robust system.
   // Uses visibility guard so background tabs don't spam updates.
-  if (typeof window !== 'undefined') {
-    // @ts-ignore
-    window.__verse_timer__ ??= setInterval(() => {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const timer = window.setInterval(() => {
       if (!document.hidden) next();
-    }, interval);
-  }
+    }, verseDuration);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [index, next, verseDuration]);
 
   return (
     <div className="pointer-events-none">
@@ -39,7 +47,17 @@ export function VerseCycler() {
           <VerseBlock
             urdu={current.lang === 'ur' ? current.text : undefined}
             transliteration={current.transliteration}
-            translation={current.translation if current.translation else (current.lang === 'en' ? current.text : undefined)}
+            translation={current.translation ?? (current.lang === 'en' ? current.text : undefined)}
+
+
+
+
+            translation={
+              current.translation ??
+              (current.lang === 'en' ? current.text : undefined)
+            }
+
+
             showTransliteration={showTransliteration}
             showTranslation={showTranslation}
           />

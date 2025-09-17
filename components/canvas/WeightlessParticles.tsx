@@ -106,6 +106,7 @@ export function WeightlessParticles({ dimmed = false }: Props) {
       canvas.style.width = w + 'px';
       canvas.style.height = h + 'px';
 
+
       const densityScale = computeDensityScale(w);
       const baseCount = Math.max(12, Math.floor(((w * h) / 12000) * density * densityScale));
       const targetCount = reduceMotion ? Math.max(6, Math.floor(baseCount * 0.35)) : baseCount;
@@ -116,6 +117,11 @@ export function WeightlessParticles({ dimmed = false }: Props) {
       targetWind.y = 0;
 
       particles = Array.from({ length: targetCount }, () => ({
+
+      const focusScale = dimmed ? 0.35 : 1;
+      const targetDensity = Math.max(0, Math.floor((w * h) / 12000 * density * focusScale));
+      particles = Array.from({ length: targetDensity }, () => ({
+
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
         vx: (Math.random() - 0.5) * 0.04 * DPR,
@@ -124,8 +130,26 @@ export function WeightlessParticles({ dimmed = false }: Props) {
         life: Math.random() * 1000
       }));
 
+
       if (reduceMotion) {
         drawParticleField();
+
+    }
+    function step() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = dimmed ? 0.12 : 0.45;
+      ctx.fillStyle = 'white';
+      const baseNudge = dimmed ? 0.02 : 0.05;
+      const reactiveScale = dimmed ? 0.05 : 0.15;
+      const nudge = baseNudge + energy() * reactiveScale;
+      for (const p of particles) {
+        p.vx += Math.sin(p.life * 0.003) * 0.005 * nudge;
+        p.vy += Math.cos(p.life * 0.004) * 0.005 * nudge;
+        p.x += p.vx; p.y += p.vy; p.life += 1;
+        if (p.x < 0) p.x += canvas.width; if (p.x > canvas.width) p.x -= canvas.width;
+        if (p.y < 0) p.y += canvas.height; if (p.y > canvas.height) p.y -= canvas.height;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+
       }
     };
 
@@ -181,6 +205,7 @@ export function WeightlessParticles({ dimmed = false }: Props) {
     }
 
     window.addEventListener('resize', resize);
+
     window.addEventListener('pointermove', pointerHandler);
     if (canUseDeviceOrientation) {
       window.addEventListener('deviceorientation', orientationHandler);
@@ -206,6 +231,32 @@ export function WeightlessParticles({ dimmed = false }: Props) {
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       removeMotionListener();
+
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(raf);
+      } else {
+        raf = requestAnimationFrame(step);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', handleVisibility);
+
+    function handleVisibilityChange() {
+      if (document.hidden) cancelAnimationFrame(raf);
+      else raf = requestAnimationFrame(step);
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+
     };
   }, [dimmed, density, energy]);
 
