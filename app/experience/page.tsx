@@ -4,18 +4,42 @@ import { EarthWindow } from '@/components/video/EarthWindow';
 import { WeightlessParticles } from '@/components/canvas/WeightlessParticles';
 import { VerseCycler } from '@/components/poetry/VerseCycler';
 import { ControlsBar } from '@/components/ui/ControlsBar';
+import { InfoDialog } from '@/components/ui/InfoDialog';
 import { useSceneStore } from '@/lib/scene';
 
 export default function ExperiencePage() {
   const focusMode = useSceneStore(s => s.focusMode);
+  const infoDialogOpen = useSceneStore(s => s.infoDialogOpen);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === 'KeyF') useSceneStore.getState().toggleFocus();
-      if (e.code === 'KeyT') useSceneStore.getState().toggleTrack();
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (key === 'f') {
+        e.preventDefault();
+        useSceneStore.getState().toggleFocus();
+      }
+      if (key === 't') {
+        e.preventDefault();
+        useSceneStore.getState().toggleTrack();
+      }
+      if (key === 'i') {
+        e.preventDefault();
+        const { infoDialogOpen: open, setInfoDialogOpen } = useSceneStore.getState();
+        setInfoDialogOpen(!open);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  useEffect(() => {
+    document.body.classList.toggle('focus-cursor-dim', focusMode && !infoDialogOpen);
+    document.body.style.setProperty('--input-cue-opacity', focusMode ? '0.35' : '1');
+    return () => {
+      document.body.classList.remove('focus-cursor-dim');
+      document.body.style.removeProperty('--input-cue-opacity');
+    };
+  }, [focusMode, infoDialogOpen]);
 
   return (
     <main className="relative min-h-dvh w-full overflow-hidden bg-black">
@@ -27,6 +51,7 @@ export default function ExperiencePage() {
         </Suspense>
       </div>
       <ControlsBar />
+      <InfoDialog />
     </main>
   );
 }

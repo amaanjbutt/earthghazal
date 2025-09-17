@@ -14,6 +14,20 @@ body {
   @apply bg-black text-white font-ui;
 }
 
+body.focus-cursor-dim,
+body.focus-cursor-dim * {
+  cursor: none !important;
+}
+
+body.info-dialog-open {
+  overflow: hidden;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+}
+
 .video-gradient {
   background: radial-gradient(1200px 600px at 50% 60%, rgba(0,0,0,0.05), rgba(0,0,0,0.55));
 }

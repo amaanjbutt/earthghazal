@@ -22,7 +22,9 @@ export function WeightlessParticles({ dimmed = false }: Props) {
       canvas.height = Math.floor(h * DPR);
       canvas.style.width = w + 'px';
       canvas.style.height = h + 'px';
-      particles = Array.from({ length: Math.floor((w * h) / 12000 * density) }, () => ({
+      const focusScale = dimmed ? 0.35 : 1;
+      const targetDensity = Math.max(0, Math.floor((w * h) / 12000 * density * focusScale));
+      particles = Array.from({ length: targetDensity }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
         vx: (Math.random() - 0.5) * 0.08 * DPR,
@@ -33,9 +35,11 @@ export function WeightlessParticles({ dimmed = false }: Props) {
     }
     function step() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.globalAlpha = dimmed ? 0.2 : 0.5;
+      ctx.globalAlpha = dimmed ? 0.12 : 0.45;
       ctx.fillStyle = 'white';
-      const nudge = (0.05 + energy() * 0.15);
+      const baseNudge = dimmed ? 0.02 : 0.05;
+      const reactiveScale = dimmed ? 0.05 : 0.15;
+      const nudge = baseNudge + energy() * reactiveScale;
       for (const p of particles) {
         p.vx += Math.sin(p.life * 0.003) * 0.005 * nudge;
         p.vy += Math.cos(p.life * 0.004) * 0.005 * nudge;
@@ -49,11 +53,19 @@ export function WeightlessParticles({ dimmed = false }: Props) {
     resize();
     step();
     window.addEventListener('resize', resize);
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) cancelAnimationFrame(raf);
-      else raf = requestAnimationFrame(step);
-    });
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+    const handleVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(raf);
+      } else {
+        raf = requestAnimationFrame(step);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [dimmed, density, energy]);
 
   return <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 -z-10" />;
