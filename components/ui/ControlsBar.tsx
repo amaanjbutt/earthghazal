@@ -1,30 +1,50 @@
 'use client';
 
-
 import clsx from 'classnames';
+
 import { useSceneStore } from '@/lib/scene';
 import type { Track } from '@/lib/types';
 
 export function ControlsBar() {
-  const focus = useSceneStore(s => s.focusMode);
-  const toggleFocus = useSceneStore(s => s.toggleFocus);
-  const track = useSceneStore(s => s.track);
-  const setTrack = useSceneStore(s => s.setTrack);
-  const playlist = useSceneStore(s => s.playlist);
-  const toggleTrack = useSceneStore(s => s.toggleTrack);
-  const audioReady = useSceneStore(s => s.audioReady);
-  const audioPlaying = useSceneStore(s => s.audioPlaying);
-  const playAudio = useSceneStore(s => s.playAudio);
-  const pauseAudio = useSceneStore(s => s.pauseAudio);
-  const audioMuted = useSceneStore(s => s.audioMuted);
-  const toggleMute = useSceneStore(s => s.toggleMute);
-  const audioVolume = useSceneStore(s => s.audioVolume);
-  const setAudioVolume = useSceneStore(s => s.setAudioVolume);
-  const subtitles = useSceneStore(s => s.subtitles);
-  const setSubtitles = useSceneStore(s => s.setSubtitles);
-  const particleDensity = useSceneStore(s => s.particleDensity);
-  const setParticleDensity = useSceneStore(s => s.setParticleDensity);
-  const toggleInfoDialog = useSceneStore(s => s.toggleInfoDialog);
+  const {
+    focusMode,
+    toggleFocus,
+    track,
+    setTrack,
+    playlist,
+    audioReady,
+    audioPlaying,
+    playAudio,
+    pauseAudio,
+    audioMuted,
+    toggleMute,
+    audioVolume,
+    setAudioVolume,
+    subtitles,
+    setSubtitles,
+    particleDensity,
+    setParticleDensity,
+    toggleInfoDialog,
+  } = useSceneStore(state => ({
+    focusMode: state.focusMode,
+    toggleFocus: state.toggleFocus,
+    track: state.track,
+    setTrack: state.setTrack,
+    playlist: state.playlist,
+    audioReady: state.audioReady,
+    audioPlaying: state.audioPlaying,
+    playAudio: state.playAudio,
+    pauseAudio: state.pauseAudio,
+    audioMuted: state.audioMuted,
+    toggleMute: state.toggleMute,
+    audioVolume: state.audioVolume,
+    setAudioVolume: state.setAudioVolume,
+    subtitles: state.subtitles,
+    setSubtitles: state.setSubtitles,
+    particleDensity: state.particleDensity,
+    setParticleDensity: state.setParticleDensity,
+    toggleInfoDialog: state.toggleInfoDialog,
+  }));
 
   const availableTracks = playlist?.tracks ?? [];
   const trackOptions = availableTracks.length
@@ -32,41 +52,38 @@ export function ControlsBar() {
     : (['day', 'night'] satisfies Track[]).map(id => ({ id, label: id === 'day' ? 'Day' : 'Night' }));
 
   return (
-
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-10 px-4 pb-4">
       <div
         className={clsx(
           'pointer-events-auto mx-auto w-full max-w-5xl rounded-2xl border border-white/10 bg-black/60 text-sm text-white shadow-lg backdrop-blur transition-all duration-300',
-          focus && 'pointer-events-none translate-y-6 opacity-0'
+          focusMode && 'pointer-events-none translate-y-6 opacity-0'
         )}
       >
-        <div className="flex flex-wrap items-center gap-3 p-3">
-          <button
-            onClick={toggleFocus}
-            aria-pressed={focus}
-            className="rounded-xl border border-white/15 px-3 py-2 font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
-          >
-
-    <div className="pointer-events-auto fixed inset-x-0 bottom-0 z-10 px-4 pb-4">
-      <div className="mx-auto w-full max-w-5xl rounded-2xl bg-black/40 backdrop-blur border border-white/10">
-        <div className="flex flex-wrap items-center gap-4 p-3 text-sm">
+        <div className="flex flex-wrap items-center gap-4 p-3">
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={audioPlaying ? pauseAudio : playAudio}
               disabled={!audioReady}
-              className="rounded-xl border border-white/15 px-3 py-2 hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+              className="rounded-xl border border-white/15 px-3 py-2 font-medium text-white/80 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              aria-pressed={audioPlaying}
+              aria-label={audioPlaying ? 'Pause audio playback' : 'Play audio playback'}
             >
               {audioPlaying ? 'Pause' : 'Play'}
             </button>
             <button
+              type="button"
               onClick={toggleMute}
               disabled={!audioReady}
-              className="rounded-xl border border-white/15 px-3 py-2 hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+              className="rounded-xl border border-white/15 px-3 py-2 font-medium text-white/80 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              aria-pressed={audioMuted}
+              aria-label={audioMuted ? 'Unmute audio' : 'Mute audio'}
             >
               {audioMuted ? 'Unmute' : 'Mute'}
             </button>
           </div>
-          <label className="flex items-center gap-2 whitespace-nowrap">
+
+          <label className="flex items-center gap-2 whitespace-nowrap text-white/70">
             Volume
             <input
               type="range"
@@ -74,65 +91,68 @@ export function ControlsBar() {
               max={1}
               step={0.05}
               value={audioVolume}
-              onChange={e => setAudioVolume(parseFloat(e.target.value))}
+              onChange={event => setAudioVolume(parseFloat(event.target.value))}
               disabled={!audioReady}
               className="w-28 accent-white/90 disabled:opacity-40"
+              aria-label="Audio volume"
             />
           </label>
-          <button onClick={toggleFocus} className="rounded-xl border border-white/15 px-3 py-2 hover:bg-white/5">
 
-            {focus ? 'Exit Focus' : 'Focus Mode'}
+          <button
+            type="button"
+            onClick={toggleFocus}
+            className="rounded-xl border border-white/15 px-3 py-2 font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
+            aria-pressed={focusMode}
+            aria-label={focusMode ? 'Exit focus mode' : 'Enter focus mode'}
+          >
+            {focusMode ? 'Exit Focus' : 'Focus Mode'}
           </button>
-          <div className="flex items-center gap-2">
+
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-white/60">Scene</span>
             <div className="flex gap-2" role="group" aria-label="Scene selection">
-              {trackOptions.map(option => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => (availableTracks.length ? setTrack(option.id) : setTrack(option.id))}
-                  className={clsx(
-                    'rounded-xl border border-white/15 px-3 py-2 transition-colors',
-                    track === option.id ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/5 text-white/80',
-                  )}
-                  aria-pressed={track === option.id}
-                >
-                  {option.label}
-                </button>
-              ))}
+              {trackOptions.map(option => {
+                const selected = track === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setTrack(option.id)}
+                    className={clsx(
+                      'rounded-xl border border-white/15 px-3 py-2 font-medium transition',
+                      selected ? 'bg-white/20 text-white shadow-inner' : 'text-white/80 hover:bg-white/10 hover:text-white'
+                    )}
+                    aria-pressed={selected}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
-          <label className="flex items-center gap-2">
-            <input type="checkbox"
-          <button
-            onClick={toggleTrack}
 
-            className="rounded-xl border border-white/15 px-3 py-2 font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
-
-            disabled={!audioReady}
-            className="rounded-xl border border-white/15 px-3 py-2 hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
-
-          >
-            {track === 'day' ? 'Night' : 'Day'}
-          </button>
           <label className="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-white/70">
             <input
               type="checkbox"
               checked={subtitles.transliteration}
-              onChange={e => setSubtitles({ ...subtitles, transliteration: e.target.checked })}
+              onChange={event => setSubtitles({ ...subtitles, transliteration: event.target.checked })}
               className="accent-white"
+              aria-label="Toggle transliteration subtitles"
             />
             Transliteration
           </label>
+
           <label className="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-white/70">
             <input
               type="checkbox"
               checked={subtitles.translation}
-              onChange={e => setSubtitles({ ...subtitles, translation: e.target.checked })}
+              onChange={event => setSubtitles({ ...subtitles, translation: event.target.checked })}
               className="accent-white"
+              aria-label="Toggle translation subtitles"
             />
             Translation
           </label>
+
           <label className="ml-auto flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-white/70">
             <span>Particles</span>
             <input
@@ -141,21 +161,27 @@ export function ControlsBar() {
               max={1.5}
               step={0.05}
               value={particleDensity}
-              onChange={e => setParticleDensity(parseFloat(e.target.value))}
+              onChange={event => setParticleDensity(parseFloat(event.target.value))}
               className="h-2 w-28 cursor-pointer appearance-none rounded-full bg-white/10 accent-white"
+              aria-label="Particle density"
             />
           </label>
+
           <button
+            type="button"
             onClick={toggleInfoDialog}
             className="rounded-xl border border-white/15 px-3 py-2 font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
+            aria-label="Show information"
           >
             Info
           </button>
         </div>
       </div>
-      {focus && (
+
+      {focusMode && (
         <div className="pointer-events-auto mt-2 flex justify-center">
           <button
+            type="button"
             onClick={toggleFocus}
             className="rounded-full border border-white/10 bg-white/10 px-4 py-1 text-xs font-medium text-white/80 shadow backdrop-blur transition hover:bg-white/20 hover:text-white"
             aria-label="Exit focus mode and show controls"
