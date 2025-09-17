@@ -8,32 +8,13 @@ import { AudioEnergyProvider } from '@/components/providers/AudioEnergyProvider'
 import { InfoDialog } from '@/components/ui/InfoDialog';
 import { IntroOverlay } from '@/components/ui/IntroOverlay';
 import { useSceneStore } from '@/lib/scene';
+import { createExperienceKeyHandler } from './shortcuts';
 
 export default function ExperiencePage() {
   const focusMode = useSceneStore(s => s.focusMode);
   const infoDialogOpen = useSceneStore(s => s.infoDialogOpen);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
-      const key = e.key.toLowerCase();
-      if (key === 'f') {
-        e.preventDefault();
-        useSceneStore.getState().toggleFocus();
-      }
-      if (key === 't') {
-        e.preventDefault();
-        useSceneStore.getState().toggleTrack();
-      }
-      if (key === 'i') {
-        e.preventDefault();
-        const { infoDialogOpen: open, setInfoDialogOpen } = useSceneStore.getState();
-        setInfoDialogOpen(!open);
-      }
-      const state = useSceneStore.getState();
-      if (!state.audioReady) return;
-      if (e.code === 'KeyF') state.toggleFocus();
-      if (e.code === 'KeyT') state.toggleTrack();
-    };
+    const onKey = createExperienceKeyHandler(() => useSceneStore.getState());
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
