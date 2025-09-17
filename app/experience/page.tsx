@@ -12,27 +12,26 @@ import { useSceneStore } from '@/lib/scene';
 export default function ExperiencePage() {
   const focusMode = useSceneStore(s => s.focusMode);
   const infoDialogOpen = useSceneStore(s => s.infoDialogOpen);
+
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
-      const key = e.key.toLowerCase();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+      const key = event.key.toLowerCase();
       if (key === 'f') {
-        e.preventDefault();
+        event.preventDefault();
         useSceneStore.getState().toggleFocus();
+        return;
       }
       if (key === 't') {
-        e.preventDefault();
+        event.preventDefault();
         useSceneStore.getState().toggleTrack();
+        return;
       }
       if (key === 'i') {
-        e.preventDefault();
+        event.preventDefault();
         const { infoDialogOpen: open, setInfoDialogOpen } = useSceneStore.getState();
         setInfoDialogOpen(!open);
       }
-      const state = useSceneStore.getState();
-      if (!state.audioReady) return;
-      if (e.code === 'KeyF') state.toggleFocus();
-      if (e.code === 'KeyT') state.toggleTrack();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

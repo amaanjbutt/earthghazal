@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useSceneStore } from '@/lib/scene';
 
 export function AudioEnergyProvider() {
-  const audioEnabled = useSceneStore(s => s.audio.enabled);
+  const audioPlaying = useSceneStore(s => s.audio.playing);
   const sampleEnergy = useSceneStore(s => s.sampleAudioEnergy);
 
   useEffect(() => {
@@ -13,7 +13,7 @@ export function AudioEnergyProvider() {
       if (raf) cancelAnimationFrame(raf);
     };
 
-    if (!audioEnabled) {
+    if (!audioPlaying) {
       sampleEnergy();
       return cancel;
     }
@@ -26,7 +26,7 @@ export function AudioEnergyProvider() {
     tick();
 
     return cancel;
-  }, [audioEnabled, sampleEnergy]);
+  }, [audioPlaying, sampleEnergy]);
 
   return null;
 }

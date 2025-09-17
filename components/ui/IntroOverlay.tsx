@@ -13,7 +13,7 @@ const FOCUSABLE_SELECTORS = [
 ].join(',');
 
 export function IntroOverlay() {
-  const audioReady = useSceneStore(s => s.audioReady);
+  const audioReady = useSceneStore(s => s.audio.ready);
   const initAudio = useSceneStore(s => s.initAudio);
   const overlayRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
@@ -31,7 +31,7 @@ export function IntroOverlay() {
     previouslyFocused.current = document.activeElement as HTMLElement | null;
 
     const focusable = Array.from(
-      node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS)
+      node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS),
     ).filter(el => !el.hasAttribute('disabled'));
 
     (focusable[0] ?? node).focus();
@@ -40,7 +40,7 @@ export function IntroOverlay() {
       if (event.key !== 'Tab') return;
       const active = document.activeElement as HTMLElement | null;
       const currentFocusable = Array.from(
-        node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS)
+        node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS),
       ).filter(el => !el.hasAttribute('disabled'));
       if (!currentFocusable.length) return;
       const first = currentFocusable[0];
@@ -71,7 +71,7 @@ export function IntroOverlay() {
   }
 
   const handleStart = () => {
-    initAudio();
+    void initAudio();
   };
 
   return (

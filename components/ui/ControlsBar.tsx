@@ -1,6 +1,5 @@
 'use client';
 
-
 import clsx from 'classnames';
 import { useSceneStore } from '@/lib/scene';
 import type { Track } from '@/lib/types';
@@ -12,13 +11,13 @@ export function ControlsBar() {
   const setTrack = useSceneStore(s => s.setTrack);
   const playlist = useSceneStore(s => s.playlist);
   const toggleTrack = useSceneStore(s => s.toggleTrack);
-  const audioReady = useSceneStore(s => s.audioReady);
-  const audioPlaying = useSceneStore(s => s.audioPlaying);
+  const audioReady = useSceneStore(s => s.audio.ready);
+  const audioPlaying = useSceneStore(s => s.audio.playing);
   const playAudio = useSceneStore(s => s.playAudio);
   const pauseAudio = useSceneStore(s => s.pauseAudio);
-  const audioMuted = useSceneStore(s => s.audioMuted);
-  const toggleMute = useSceneStore(s => s.toggleMute);
-  const audioVolume = useSceneStore(s => s.audioVolume);
+  const audioMuted = useSceneStore(s => s.audio.muted);
+  const toggleAudioMute = useSceneStore(s => s.toggleAudioMute);
+  const audioVolume = useSceneStore(s => s.audio.volume);
   const setAudioVolume = useSceneStore(s => s.setAudioVolume);
   const subtitles = useSceneStore(s => s.subtitles);
   const setSubtitles = useSceneStore(s => s.setSubtitles);
@@ -32,68 +31,60 @@ export function ControlsBar() {
     : (['day', 'night'] satisfies Track[]).map(id => ({ id, label: id === 'day' ? 'Day' : 'Night' }));
 
   return (
-
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-10 px-4 pb-4">
       <div
         className={clsx(
           'pointer-events-auto mx-auto w-full max-w-5xl rounded-2xl border border-white/10 bg-black/60 text-sm text-white shadow-lg backdrop-blur transition-all duration-300',
-          focus && 'pointer-events-none translate-y-6 opacity-0'
+          focus && 'pointer-events-none translate-y-6 opacity-0',
         )}
       >
         <div className="flex flex-wrap items-center gap-3 p-3">
-          <button
-            onClick={toggleFocus}
-            aria-pressed={focus}
-            className="rounded-xl border border-white/15 px-3 py-2 font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
-          >
-
-    <div className="pointer-events-auto fixed inset-x-0 bottom-0 z-10 px-4 pb-4">
-      <div className="mx-auto w-full max-w-5xl rounded-2xl bg-black/40 backdrop-blur border border-white/10">
-        <div className="flex flex-wrap items-center gap-4 p-3 text-sm">
           <div className="flex items-center gap-2">
             <button
               onClick={audioPlaying ? pauseAudio : playAudio}
               disabled={!audioReady}
-              className="rounded-xl border border-white/15 px-3 py-2 hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+              className="rounded-xl border border-white/15 px-3 py-2 font-medium transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {audioPlaying ? 'Pause' : 'Play'}
             </button>
             <button
-              onClick={toggleMute}
+              onClick={toggleAudioMute}
               disabled={!audioReady}
-              className="rounded-xl border border-white/15 px-3 py-2 hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+              className="rounded-xl border border-white/15 px-3 py-2 font-medium transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {audioMuted ? 'Unmute' : 'Mute'}
             </button>
           </div>
-          <label className="flex items-center gap-2 whitespace-nowrap">
-            Volume
+          <label className="flex items-center gap-2 whitespace-nowrap rounded-xl border border-white/15 px-3 py-2">
+            <span className="text-white/70">Volume</span>
             <input
               type="range"
               min={0}
               max={1}
               step={0.05}
               value={audioVolume}
-              onChange={e => setAudioVolume(parseFloat(e.target.value))}
+              onChange={event => setAudioVolume(parseFloat(event.target.value))}
               disabled={!audioReady}
               className="w-28 accent-white/90 disabled:opacity-40"
             />
           </label>
-          <button onClick={toggleFocus} className="rounded-xl border border-white/15 px-3 py-2 hover:bg-white/5">
-
+          <button
+            onClick={toggleFocus}
+            className="rounded-xl border border-white/15 px-3 py-2 font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
+          >
             {focus ? 'Exit Focus' : 'Focus Mode'}
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2">
             <span className="text-white/60">Scene</span>
             <div className="flex gap-2" role="group" aria-label="Scene selection">
               {trackOptions.map(option => (
                 <button
                   key={option.id}
                   type="button"
-                  onClick={() => (availableTracks.length ? setTrack(option.id) : setTrack(option.id))}
+                  onClick={() => setTrack(option.id)}
                   className={clsx(
-                    'rounded-xl border border-white/15 px-3 py-2 transition-colors',
-                    track === option.id ? 'bg-white/20 text-white shadow-inner' : 'hover:bg-white/5 text-white/80',
+                    'rounded-xl border border-white/15 px-3 py-2 transition',
+                    track === option.id ? 'bg-white/20 text-white shadow-inner' : 'text-white/80 hover:bg-white/10 hover:text-white',
                   )}
                   aria-pressed={track === option.id}
                 >
@@ -102,24 +93,17 @@ export function ControlsBar() {
               ))}
             </div>
           </div>
-          <label className="flex items-center gap-2">
-            <input type="checkbox"
           <button
             onClick={toggleTrack}
-
             className="rounded-xl border border-white/15 px-3 py-2 font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
-
-            disabled={!audioReady}
-            className="rounded-xl border border-white/15 px-3 py-2 hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
-
           >
-            {track === 'day' ? 'Night' : 'Day'}
+            Switch Scene
           </button>
           <label className="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-white/70">
             <input
               type="checkbox"
               checked={subtitles.transliteration}
-              onChange={e => setSubtitles({ ...subtitles, transliteration: e.target.checked })}
+              onChange={event => setSubtitles({ ...subtitles, transliteration: event.target.checked })}
               className="accent-white"
             />
             Transliteration
@@ -128,7 +112,7 @@ export function ControlsBar() {
             <input
               type="checkbox"
               checked={subtitles.translation}
-              onChange={e => setSubtitles({ ...subtitles, translation: e.target.checked })}
+              onChange={event => setSubtitles({ ...subtitles, translation: event.target.checked })}
               className="accent-white"
             />
             Translation
@@ -141,7 +125,7 @@ export function ControlsBar() {
               max={1.5}
               step={0.05}
               value={particleDensity}
-              onChange={e => setParticleDensity(parseFloat(e.target.value))}
+              onChange={event => setParticleDensity(parseFloat(event.target.value))}
               className="h-2 w-28 cursor-pointer appearance-none rounded-full bg-white/10 accent-white"
             />
           </label>
