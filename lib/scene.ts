@@ -1,6 +1,8 @@
 'use client';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { PlaylistManifest, Track } from './types';
+import { energy as audioEnergy } from './audio';
 import { initAudio as prepareAudioGraph, play as playGraph, pause as pauseGraph, setVolume as setGraphVolume, getEnergy as measureEnergy } from './audio';
 import type { Track } from './types';
 import {
@@ -23,6 +25,7 @@ type AudioState = {
 };
 
 type State = {
+  playlist?: PlaylistManifest;
   track: Track;
   focusMode: boolean;
   subtitles: Subtitles;
@@ -41,6 +44,8 @@ type State = {
   audioVolume: number;
 
   energy: () => number;
+  setTrack: (track: Track) => void;
+  setPlaylist: (playlist: PlaylistManifest) => void;
   toggleTrack: () => void;
   toggleFocus: () => void;
   toggleInfoDialog: () => void;
@@ -64,13 +69,32 @@ type State = {
 
 };
 
-export const useSceneStore = create<State>()(persist((set, get) => ({
+export const useSceneStore = create<State>()(persist((set) => ({
+  playlist: undefined,
   track: 'day',
   focusMode: false,
   subtitles: { transliteration: false, translation: true },
   verseIndex: 0,
   verseIntervalMs: Number(process.env.NEXT_PUBLIC_VERSE_INTERVAL_MS ?? 18000),
   particleDensity: Number(process.env.NEXT_PUBLIC_PARTICLE_DENSITY ?? 0.8),
+  energy: () => audioEnergy(),
+  setTrack: (track) => set({ track }),
+  setPlaylist: (playlist) => set(state => {
+    const hasCurrent = playlist.tracks.some(entry => entry.id === state.track);
+    return {
+      playlist,
+      track: hasCurrent ? state.track : playlist.defaultTrack,
+    };
+  }),
+  toggleTrack: () => set(state => {
+    const available = state.playlist?.tracks;
+    if (!available || available.length === 0) {
+      return { track: state.track === 'day' ? 'night' : 'day' };
+    }
+    const currentIndex = available.findIndex(entry => entry.id === state.track);
+    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % available.length : 0;
+    return { track: available[nextIndex]?.id ?? state.track };
+  }),
 
   audio: { enabled: false, volume: 0.6, muted: false, energy: 0 },
   energy: () => get().audio.energy,
@@ -87,12 +111,32 @@ export const useSceneStore = create<State>()(persist((set, get) => ({
   energy: () => audioEnergy(), // placeholder for audio-reactive energy
   toggleTrack: () => set(s => (s.audioReady ? { track: s.track === 'day' ? 'night' : 'day' } : {})),
 
+
   toggleFocus: () => set(s => ({ focusMode: !s.focusMode })),
   toggleInfoDialog: () => set(s => ({ infoDialogOpen: !s.infoDialogOpen })),
   setInfoDialogOpen: (open) => set({ infoDialogOpen: open }),
   nextVerse: () => set(s => ({ verseIndex: s.verseIndex + 1 })),
   setSubtitles: (subtitles) => set({ subtitles }),
   setParticleDensity: (v) => set({ particleDensity: v }),
+
+}), {
+  name: 'earth-ghazal',
+  partialize: ({
+    track,
+    focusMode,
+    subtitles,
+    verseIndex,
+    verseIntervalMs,
+    particleDensity,
+  }) => ({
+    track,
+    focusMode,
+    subtitles,
+    verseIndex,
+    verseIntervalMs,
+    particleDensity,
+  }),
+}));
 
   initAudio: () => {
     const element = prepareAudioGraph();

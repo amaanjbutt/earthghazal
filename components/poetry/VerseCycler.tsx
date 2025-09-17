@@ -49,6 +49,8 @@ export function VerseCycler() {
             transliteration={current.transliteration}
             translation={current.translation ?? (current.lang === 'en' ? current.text : undefined)}
 
+=======
+
 
 
 
@@ -56,6 +58,7 @@ export function VerseCycler() {
               current.translation ??
               (current.lang === 'en' ? current.text : undefined)
             }
+
 
 
             showTransliteration={showTransliteration}
