@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html, body, #__next {
+  height: 100%;
+}
+
+body {
+  @apply bg-black text-white font-ui;
+}
+
+.video-gradient {
+  background: radial-gradient(1200px 600px at 50% 60%, rgba(0,0,0,0.05), rgba(0,0,0,0.55));
+}
+
+.text-shadow-soft { text-shadow: 0 2px 16px rgba(0,0,0,0.65); }
