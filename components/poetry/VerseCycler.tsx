@@ -48,10 +48,13 @@ export function VerseCycler() {
             urdu={current.lang === 'ur' ? current.text : undefined}
             transliteration={current.transliteration}
             translation={current.translation ?? (current.lang === 'en' ? current.text : undefined)}
+
+
             translation={
               current.translation ??
               (current.lang === 'en' ? current.text : undefined)
             }
+
             showTransliteration={showTransliteration}
             showTranslation={showTranslation}
           />
