@@ -1,0 +1,20 @@
+{
+  "verses": [
+    {
+      "id": "r1",
+      "lang": "ur",
+      "rtl": true,
+      "text": "یہ کائنات ابھی ناتمام ہے شاید",
+      "transliteration": "yeh kainaat abhi natamaam hai shayad",
+      "translation": "This universe may yet be unfinished.",
+      "credit": { "author": "Original", "license": "CC0" },
+      "displayMs": 16000
+    },
+    {
+      "id": "r1-en",
+      "lang": "en",
+      "text": "This universe may yet be unfinished.",
+      "credit": { "author": "Original", "license": "CC0" }
+    }
+  ]
+}
