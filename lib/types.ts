@@ -9,9 +9,26 @@ export type Verse = {
   displayMs?: number;
 };
 export type Track = 'day' | 'night';
-export type Playlist = {
-  track: Track;
-  srcs: { type: 'mp4' | 'webm'; url: string }[];
+
+export type MediaSource = {
+  url: string;
+  type: string;
+  codec?: string;
+  width?: number;
+  height?: number;
+  bitrate?: number;
+};
+
+export type TrackManifest = {
+  id: Track;
+  label: string;
   poster: string;
-  loop: boolean;
+  loop?: boolean;
+  video: MediaSource[];
+  audio?: MediaSource[];
+};
+
+export type PlaylistManifest = {
+  tracks: TrackManifest[];
+  defaultTrack: Track;
 };
