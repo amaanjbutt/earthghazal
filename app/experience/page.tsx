@@ -5,6 +5,7 @@ import { WeightlessParticles } from '@/components/canvas/WeightlessParticles';
 import { VerseCycler } from '@/components/poetry/VerseCycler';
 import { ControlsBar } from '@/components/ui/ControlsBar';
 import { InfoDialog } from '@/components/ui/InfoDialog';
+import { IntroOverlay } from '@/components/ui/IntroOverlay';
 import { useSceneStore } from '@/lib/scene';
 
 export default function ExperiencePage() {
@@ -27,6 +28,10 @@ export default function ExperiencePage() {
         const { infoDialogOpen: open, setInfoDialogOpen } = useSceneStore.getState();
         setInfoDialogOpen(!open);
       }
+      const state = useSceneStore.getState();
+      if (!state.audioReady) return;
+      if (e.code === 'KeyF') state.toggleFocus();
+      if (e.code === 'KeyT') state.toggleTrack();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -44,6 +49,7 @@ export default function ExperiencePage() {
   return (
     <main className="relative min-h-dvh w-full overflow-hidden bg-black">
       <EarthWindow />
+      <IntroOverlay />
       <WeightlessParticles dimmed={focusMode} />
       <div className="pointer-events-none absolute inset-0 grid place-items-center p-6 video-gradient">
         <Suspense fallback={null}>

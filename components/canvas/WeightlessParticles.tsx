@@ -53,6 +53,7 @@ export function WeightlessParticles({ dimmed = false }: Props) {
     resize();
     step();
     window.addEventListener('resize', resize);
+
     const handleVisibility = () => {
       if (document.hidden) {
         cancelAnimationFrame(raf);
@@ -65,6 +66,17 @@ export function WeightlessParticles({ dimmed = false }: Props) {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', handleVisibility);
+
+    function handleVisibilityChange() {
+      if (document.hidden) cancelAnimationFrame(raf);
+      else raf = requestAnimationFrame(step);
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+
     };
   }, [dimmed, density, energy]);
 
