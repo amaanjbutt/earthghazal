@@ -50,10 +50,13 @@ export function VerseCycler() {
             translation={current.translation ?? (current.lang === 'en' ? current.text : undefined)}
 
 
+
+
             translation={
               current.translation ??
               (current.lang === 'en' ? current.text : undefined)
             }
+
 
             showTransliteration={showTransliteration}
             showTranslation={showTranslation}
